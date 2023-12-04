@@ -1,14 +1,19 @@
+const { boolean } = require("joi");
 const mongoose = require("mongoose");
 
 const interctionSchema = mongoose.Schema({
-  userName: {
+  userId: {
     type: String,
   },
-  type: {
-    type: String,
-    enum: ["like", "dislike", "comment"],
-  },
-  postExpireTime: {
+  postId: { type: String },
+  interactionType: [
+    {
+      like: Boolean,
+      dislike: Boolean,
+      comment: Boolean,
+    },
+  ],
+  postExpireTimeInDays: {
     type: String,
   },
 });
