@@ -1,8 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const Post = require("../model/post");
+const Interaction = require("../model/interaction");
 const verifyToken = require("../verifyToken");
 const { postValidation } = require("../validations/validation");
+const interactionCreator = require("../utility/interactionCreator");
 
 // Get all posts
 router.get("/", async (req, res) => {
@@ -74,20 +76,54 @@ router.put("/operations", verifyToken, async (req, res) => {
     dislikes: post.dislike,
     comments: post.comments,
   };
+  const interactionType = {
+    like: false,
+    dislike: false,
+    comment: false,
+  };
+
+  // checks for like
   if (like === 1) {
+    interactionType.like = true;
     if (comment) {
       updateData.likes = updateData.likes + 1;
       updateData.comments.push(comment);
-    } else updateData.likes = post.likes + like;
+      interactionType.comment = true;
+    } else {
+      updateData.likes = post.likes + like;
+    }
+
+    // checks for dislike
   } else if (dislike === 1) {
+    interactionType.dislike = true;
     if (comment) {
       updateData.dislikes = post.dislikes + dislike;
       updateData.comments.push(comment);
+      interactionType.comment = true;
     } else updateData.dislikes = post.dislikes + dislike;
-  } else updateData.comments.push(comment);
+  } else {
+    updateData.comments.push(comment);
+    interactionType.comment = true;
+  }
+
+  // Updates new changes to the post
   const updatedPost = await Post.findByIdAndUpdate(_id, updateData, {
     new: true,
   });
+
+  // Creates Interaction record
+  const interaction = interactionCreator(
+    req.user._id,
+    post._id,
+    interactionType,
+    post.expiry,
+    post.timeStamp
+  );
+  try {
+    await Interaction.create(interaction);
+  } catch (error) {
+    res.send(error);
+  }
   res.send(updatedPost);
 });
 
